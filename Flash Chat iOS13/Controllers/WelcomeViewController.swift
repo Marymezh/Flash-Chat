@@ -22,7 +22,7 @@ class WelcomeViewController: UIViewController {
     
     func animateTitleText() {
         
-        titleLabel.text = "⚡️FlashChat"
+        titleLabel.text = K.appName
     }
     
 

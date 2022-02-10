@@ -25,7 +25,7 @@ class RegisterViewController: UIViewController {
                     
                 } else {
                     
-                    self.performSegue(withIdentifier: "RegisterNewUser", sender: self)
+                    self.performSegue(withIdentifier: K.registerSegue, sender: self)
                     
                 }
             }

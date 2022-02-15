@@ -24,7 +24,7 @@ class ChatViewController: UIViewController {
         
         title = K.appName
         navigationItem.hidesBackButton = true
-        
+
         tableView.dataSource = self
         
         tableView.register(UINib(nibName: K.cellNibName, bundle: nil), forCellReuseIdentifier: K.cellIdentifier)
@@ -33,9 +33,12 @@ class ChatViewController: UIViewController {
     }
     
     private func loadMessages() {
-        messages = []
-        
-        db.collection(K.FStore.collectionName).getDocuments { (querySnapshot, error) in
+
+        db.collection(K.FStore.collectionName)
+            .order(by: K.FStore.dateField)
+            .addSnapshotListener { (querySnapshot, error) in
+            
+            self.messages = []
             if let error = error {
                 print ("There was an issue retrieving data from Firestore \(error.localizedDescription)")
             } else {
@@ -48,6 +51,8 @@ class ChatViewController: UIViewController {
                             
                             DispatchQueue.main.async {
                                 self.tableView.reloadData()
+                                let indexPath = IndexPath(row: self.messages.count - 1, section: 0)
+                                self.tableView.scrollToRow(at: indexPath, at: .top, animated: true)
                             }
                         }
                     }
@@ -60,12 +65,19 @@ class ChatViewController: UIViewController {
         
         if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email {
             db.collection(K.FStore.collectionName).addDocument(data: [
-                                                                K.FStore.senderField : messageSender,
-                                                                K.FStore.bodyField: messageBody]) { (error) in
+                K.FStore.senderField: messageSender,
+                K.FStore.bodyField: messageBody,
+                K.FStore.dateField: Date().timeIntervalSince1970
+            ]) { (error) in
                 if let error = error {
                     print("There was an issue saving data to firestore \(error.localizedDescription)")
                 } else {
                     print ("Data is successfully saved")
+                    
+                    DispatchQueue.main.async {
+                        self.messageTextfield.text = ""
+                    }
+                    
                 }
             }
         }
@@ -98,8 +110,25 @@ extension ChatViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
+        let message = messages[indexPath.row]
+        
         let cell = tableView.dequeueReusableCell(withIdentifier: K.cellIdentifier, for: indexPath) as! MessageCell
-        cell.label.text = messages[indexPath.row].body
+        cell.label.text = message.body
+        
+        // this is a message from a current user
+        if message.sender == Auth.auth().currentUser?.email {
+            cell.leftImageView.isHidden = true
+            cell.rightImageView.isHidden = false
+            cell.messageBubble.backgroundColor = UIColor(named: K.BrandColors.lightPurple)
+            cell.label.textColor = UIColor(named: K.BrandColors.purple)
+        } else {
+            cell.leftImageView.isHidden = false
+            cell.rightImageView.isHidden = true
+            cell.messageBubble.backgroundColor = UIColor(named: K.BrandColors.purple)
+            cell.label.textColor = UIColor(named: K.BrandColors.lightPurple)
+        }
+   
         return cell
     }
 }
+
